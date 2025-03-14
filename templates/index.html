@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Face Detection</title>
+</head>
+<body>
+    <h2>Face Detection</h2>
+    <video id="video" width="640" height="480" autoplay></video>
+    <button id="capture">Capture Image</button>
+    <button id="upload">Detect Face</button>
+    <canvas id="canvas" width="640" height="480" style="display:none;"></canvas>
+    <img id="capturedImage" style="display:none;">
+
+    <script>
+        // Access the webcam
+        const video = document.getElementById('video');
+        navigator.mediaDevices.getUserMedia({ video: true })
+            .then(stream => {
+                video.srcObject = stream;
+            })
+            .catch(err => {
+                console.error("Error accessing webcam: ", err);
+            });
+
+        let capturedImageData = null;
+
+        // Capture image
+        document.getElementById('capture').addEventListener('click', function() {
+            const canvas = document.getElementById('canvas');
+            const context = canvas.getContext('2d');
+            context.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+            // Convert canvas to Base64 image
+            capturedImageData = canvas.toDataURL('image/png');
+
+            // Show captured image
+            const img = document.getElementById('capturedImage');
+            img.src = capturedImageData;
+            img.style.display = 'block';
+        });
+
+        // Upload image for face detection
+        document.getElementById('upload').addEventListener('click', function() {
+            if (!capturedImageData) {
+                alert("Please capture an image first!");
+                return;
+            }
+
+            // Convert Base64 to Blob
+            fetch(capturedImageData)
+                .then(res => res.blob())
+                .then(blob => {
+                    let formData = new FormData();
+                    formData.append("file", blob, "captured_image.png");
+
+                    fetch('http://127.0.0.1:5000/detect_face', {
+                        method: 'POST',
+                        body: formData
+                    })
+                    .then(response => response.json())
+                    .then(data => alert("Face Detection Result: " + JSON.stringify(data)))
+                    .catch(error => console.error("Error:", error));
+                });
+        });
+    </script>
+</body>
+</html>
